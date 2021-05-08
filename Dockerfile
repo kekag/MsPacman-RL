@@ -5,6 +5,6 @@ WORKDIR mpm/
 COPY MsPacman.py mpm/
 COPY dependencies.txt mpm/
 
-RUN sudo pip3 install -r mpm/dependencies.txt
+RUN pip3 install -r mpm/dependencies.txt
 
-CMD ["sudo", "python3", "MsPacman.py"]
+CMD ["python3", "MsPacman.py"]
