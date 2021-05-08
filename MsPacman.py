@@ -77,7 +77,7 @@ def create_state_model(n_bytes, action_count, channel_count, model_loss, model_o
     print(model.summary())
     return model
 
-# Too lazy to parse command-line arguments because argparse and sys.argv aren't great, so I'll hard code these
+# Too lazy to parse command-line arguments because argparse and sys.argv aren't convenient, so I'll hard code these
 state = True # Use RAM (state) or image stack as input
 gamma = 0.995
 epsilon = 0.05
