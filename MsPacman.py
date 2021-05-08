@@ -30,8 +30,8 @@ def plot_reward(history, filename):
     fig.savefig(filename)
 
 def create_image_processing_model(size, n_stack, n_actions, n_channels, model_loss, model_optimizer, model_metrics):
-    kernel_size = (n_stack, size//21, size//21)
-    pool_size = (n_stack//2, size//42, size//42)
+    kernel_size = (n_stack, 4, 4)
+    pool_size = (n_stack//2, 2, 2)
     input_shape = (n_stack, size, size, n_channels)
 
     model = keras.models.Sequential()
@@ -148,20 +148,10 @@ if len(sys.argv) > 1:
             sys.exit(0)
         i += 1
 
-print("state:", state)
-print("gamma:", gamma)
-print("epsilon:", epsilon)
-print("n_episodes:", n_episodes)
-print("one_life:", one_life)
-print("verbose:", verbose)
-print("render:", render)
-
-sys.exit(0)
-
 if not state:
     env = gym.make('MsPacmanNoFrameskip-v4')
     frame_stack = 4
-    frame_size = env.observation_space.shape[1]
+    frame_size = 84
     env = gym.wrappers.AtariPreprocessing(env, terminal_on_life_loss=one_life, scale_obs=False)
     env = gym.wrappers.FrameStack(env, frame_stack)
     model_name = "ms_pacman.h5"
@@ -182,7 +172,7 @@ figure_file = os.path.join(figure_path, figure_name)
 
 model_loss = "MSE"
 model_optimizer = "Nadam"
-model_metrics = ["MAE", "Huber"]
+model_metrics = ["MAE"]
 
 channel_count = 1
 action_count = env.action_space.n
