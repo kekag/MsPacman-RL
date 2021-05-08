@@ -1,5 +1,10 @@
 FROM python:3.8
 
-RUN sudo pip3 install -r dependencies
+WORKDIR mpm/
+
+COPY MsPacman.py mpm/
+COPY dependencies.txt mpm/
+
+RUN sudo pip3 install -r mpm/dependencies.txt
 
 CMD ["sudo", "python3", "MsPacman.py"]
