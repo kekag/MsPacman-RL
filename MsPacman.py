@@ -2,18 +2,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gym
 import gym.wrappers
+import os
+import sys
+
+# Only print tf errors
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import tensorflow as tf
 import tensorflow.keras as keras
-import sys
-import os
 import keyboard
-import argparse
 
 def plot_reward(history, filename):
     fig = plt.figure(figsize=(10, 7))
     plt.plot(history)
     plt.grid(True)
-    plt.xlabel("epoch")
+    plt.xlabel("episode")
     plt.ylabel("total reward")
     # Don't overwrite any existing plots
     if os.path.exists(filename):
@@ -77,14 +80,83 @@ def create_state_model(n_bytes, action_count, channel_count, model_loss, model_o
     print(model.summary())
     return model
 
-# Too lazy to parse command-line arguments because argparse and sys.argv aren't convenient, so I'll hard code these
-state = True # Use RAM (state) or image stack as input
-gamma = 0.995
-epsilon = 0.05
-n_epochs = 1
-one_life = True
-verbose = True
-render = True
+# Arg defaults
+state = True        # Use RAM/state (True) or image stack (False) as input
+gamma = 0.995       # Remember past experience 
+epsilon = 0.05      # Random operation percentage
+n_episodes = 5      # Number of Training iterations
+one_life = False    # Terminate training after losing first life
+verbose = True      # Print information each tick
+render = True       # Render window
+
+# Basic parser
+if len(sys.argv) > 1:
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] in ("--image", "-image", "-i"):
+            state = False
+        elif args[i] in ("--gamma", "-gamma", "-g"):
+            try:
+                gamma = float(args[i+1])
+                if gamma < 0:
+                    gamma = 0
+                elif gamma > 1:
+                    gamma = 1
+                i += 1
+            except:
+                print(f"Expected float after '{args[i]}' flag, skipping...")
+        elif args[i] in ("--epsilon", "-epsilon", "-e"):
+            try:
+                epsilon = float(args[i+1])
+                if epsilon < 0:
+                    epsilon = 0
+                elif epsilon > 1:
+                    epsilon = 1
+                i += 1
+            except:
+                print(f"Expected float after '{args[i]}' flag, skipping...")
+        elif args[i] in ("--numeps", "-numeps", "-n"):
+            try:
+                n_episodes = int(args[i+1])
+                if n_episodes < 1:
+                    n_episodes = 1
+                if n_episodes > 2500:
+                    n_episodes = 2500
+                i += 1
+            except:
+                print(f"Expected int after '{args[i]}' flag, skipping...")
+        elif args[i] in ("--onelife", "-onelife", "-o"):
+            one_life = True
+        elif args[i] in ("--background", "-background", "-b"):
+            verbose = False
+            render = False
+        else:
+            print("FLAG USAGE\n")
+            print("-image")
+            print("\tUse image stack environment")
+            print("-gamma (float)")
+            print("\tValue of future reward [default 0.995]")
+            print("-epsilon (float)")
+            print("\tChance of random step [default 0.05]")
+            print("-numeps (int)")
+            print("\tNumber of training iterations [default 5]")
+            print("-onelife")
+            print("\tTerminate each iteration after losing first life")
+            print("-background")
+            print("\tHide window and display only basic information\n")
+            sys.exit(0)
+        i += 1
+
+print("state:", state)
+print("gamma:", gamma)
+print("epsilon:", epsilon)
+print("n_episodes:", n_episodes)
+print("one_life:", one_life)
+print("verbose:", verbose)
+print("render:", render)
+
+sys.exit(0)
 
 if not state:
     env = gym.make('MsPacmanNoFrameskip-v4')
@@ -96,7 +168,8 @@ if not state:
     figure_name = "ms_pacman_plot.pdf"
 else:
     env = gym.make('MsPacman-ram-v0')
-    # The AtariPreprocessing wrapper doesn't support RAM as obs_type, so I'll have to manually check each step to support termination on life loss 
+    # The AtariPreprocessing wrapper doesn't support RAM as obs_type, so I'll have to 
+    # manually check each step to support termination on life loss for one_life
     n_bytes = 128
     model_name = "ms_pacman_ram.h5"
     figure_name = "ms_pacman_ram_plot.pdf"
@@ -114,7 +187,7 @@ model_metrics = ["MAE", "Huber"]
 channel_count = 1
 action_count = env.action_space.n
 
-epochs_processed = 0
+episodes_processed = 0
 rewards = []
 
 if os.path.exists(model_file):
@@ -126,7 +199,7 @@ else:
         model = create_state_model(n_bytes, action_count, channel_count, model_loss, model_optimizer, model_metrics)
 
 def main():
-    global epochs_processed
+    global episodes_processed
     global rewards
     
     if verbose:
@@ -134,11 +207,10 @@ def main():
         print("Action Space:     ", env.action_space)
         print("Action Meanings:  ", env.get_action_meanings())
         print("Action Keys:      ", env.get_keys_to_action())
-        print("Action Count:     ", env.action_space.n )
         print()
 
-    for i in range(n_epochs):
-        print("Epoch:", i )
+    for i in range(n_episodes):
+        print("Episode:", i )
         if verbose:
             print()
 
@@ -206,12 +278,13 @@ def main():
             next_state = np.asarray(next_state)
             next_state = next_state.reshape((1,) + next_state.shape+(1,))
 
-            frame_info = "ACTION: %9s%7s | REWARD: %3i | LIVES: %d" % (env.get_action_meanings()[action], action_type, current_reward, info.get('ale.lives'))
+            frame_info = "EP %i. ACTION: %9s%7s | REWARD: %4i | LIVES: %d" % (episodes_processed, env.get_action_meanings()[action], action_type, current_reward, info.get('ale.lives'))
             if verbose:
                 print(frame_info)
 
             # current_reward *= 2
             total_reward += current_reward
+            # total_reward += 1 # reward each survived tick
 
             target = current_reward + gamma * np.max(model.predict(next_state))
             target_vec = model.predict(state)[0]
@@ -222,7 +295,6 @@ def main():
             state = next_state
            
             if done:
-                # total_reward += tick # reward each survived tick
                 rewards.append(total_reward)
                 if verbose:
                     print()
@@ -235,11 +307,11 @@ def main():
         if render:
             env.render()
 
-        epochs_processed += 1
+        episodes_processed += 1
 
     env.close()
     model.save(model_file)
-    if n_epochs >= 5:
+    if n_episodes >= 5:
         plot_reward(rewards, figure_file)
 
 if __name__ == "__main__":
@@ -252,7 +324,7 @@ if __name__ == "__main__":
             if save == 'y':
                 env.close()
                 model.save(model_file)
-                if epochs_processed >= 5:
+                if episodes_processed >= 5:
                     plot_reward(rewards, figure_file)
             sys.exit(0)
         except SystemExit:
