@@ -4,3 +4,4 @@ pandas
 tensorflow
 gym
 gym[atari]
+keyboard
