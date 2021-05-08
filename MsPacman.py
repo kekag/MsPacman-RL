@@ -1,12 +1,13 @@
+import numpy as np
+import matplotlib.pyplot as plt
 import gym
 import gym.wrappers
 import tensorflow as tf
 import tensorflow.keras as keras
-import numpy as np
-import matplotlib.pyplot as plt
 import sys
 import os
 import keyboard
+import argparse
 
 def plot_reward(history, filename):
     fig = plt.figure(figsize=(10, 7))
@@ -67,37 +68,38 @@ def create_state_model(n_bytes, action_count, channel_count, model_loss, model_o
     
     model.add(keras.layers.Flatten())
 
-    model.add(keras.layers.Dense(64, activation="softplus"))
+    model.add(keras.layers.Dense(64, activation="softplus", bias_initializer="he_normal"))
     model.add(keras.layers.Dropout(0.5))
-    model.add(keras.layers.Dense(action_count, activation="softplus"))
+    model.add(keras.layers.Dense(action_count, activation="softplus", bias_initializer="he_normal"))
 
     model.compile(loss=model_loss, optimizer=model_optimizer, metrics=model_metrics)
 
     print(model.summary())
     return model
 
-# Arguments
-state = True # Use RAM or image stack as input
-
+# Too lazy to parse command-line arguments because argparse and sys.argv aren't great, so I'll hard code these
+state = True # Use RAM (state) or image stack as input
 gamma = 0.995
 epsilon = 0.05
+n_epochs = 1
+one_life = True
 verbose = True
 render = True
-n_epochs = 1
 
 if not state:
     env = gym.make('MsPacmanNoFrameskip-v4')
+    frame_stack = 4
+    frame_size = env.observation_space.shape[1]
+    env = gym.wrappers.AtariPreprocessing(env, terminal_on_life_loss=one_life, scale_obs=False)
+    env = gym.wrappers.FrameStack(env, frame_stack)
     model_name = "ms_pacman.h5"
     figure_name = "ms_pacman_plot.pdf"
-    env = gym.wrappers.AtariPreprocessing(env, terminal_on_life_loss=False, scale_obs=False)
-    env = gym.wrappers.FrameStack(env, frame_stack)
-    frame_stack = 4
-    frame_size = 84
 else:
     env = gym.make('MsPacman-ram-v0')
+    # The AtariPreprocessing wrapper doesn't support RAM as obs_type, so I'll have to manually check each step to support termination on life loss 
+    n_bytes = 128
     model_name = "ms_pacman_ram.h5"
     figure_name = "ms_pacman_ram_plot.pdf"
-    n_bytes = 128
 
 model_path = "models"
 model_file = os.path.join(model_path, model_name)
@@ -107,10 +109,13 @@ figure_file = os.path.join(figure_path, figure_name)
 
 model_loss = "MSE"
 model_optimizer = "Nadam"
-model_metrics = ["MAE"]
+model_metrics = ["MAE", "Huber"]
 
 channel_count = 1
 action_count = env.action_space.n
+
+epochs_processed = 0
+rewards = []
 
 if os.path.exists(model_file):
     model = keras.models.load_model(model_file)
@@ -121,8 +126,9 @@ else:
         model = create_state_model(n_bytes, action_count, channel_count, model_loss, model_optimizer, model_metrics)
 
 def main():
-    rewards = []
-
+    global epochs_processed
+    global rewards
+    
     if verbose:
         print()
         print("Action Space:     ", env.action_space)
@@ -132,7 +138,9 @@ def main():
         print()
 
     for i in range(n_epochs):
-        print("epoch:", i )
+        print("Epoch:", i )
+        if verbose:
+            print()
 
         state = env.reset()
         state = np.asarray(state)
@@ -153,14 +161,16 @@ def main():
 
             if keyboard.is_pressed("space"):
                 if always_noop:
-                    print("⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻")
-                    print("               DISABLED ALWAYS NOOP              ")
-                    print("_________________________________________________")
+                    if verbose:
+                        print("⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻")
+                        print("               DISABLED ALWAYS NOOP              ")
+                        print("_________________________________________________")
                     always_noop = False
                 else:
-                    print("⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻")
-                    print("               ENABLED ALWAYS NOOP               ")
-                    print("_________________________________________________")
+                    if verbose:
+                        print("⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻⎻")
+                        print("               ENABLED ALWAYS NOOP               ")
+                        print("_________________________________________________")
                     always_noop = True
             elif keyboard.is_pressed("up") and keyboard.is_pressed("right"):
                 action = 5
@@ -214,6 +224,8 @@ def main():
             if done:
                 # total_reward += tick # reward each survived tick
                 rewards.append(total_reward)
+                if verbose:
+                    print()
                 print("Reward:", total_reward)
                 print()
 
@@ -223,19 +235,25 @@ def main():
         if render:
             env.render()
 
+        epochs_processed += 1
+
     env.close()
     model.save(model_file)
-    if n_epochs > 5:
+    if n_epochs >= 5:
         plot_reward(rewards, figure_file)
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Keyboard interrupt: shutting down")
+        print("\nKEYBOARD INTERRUPT")
         try:
-            env.close()
-            model.save(model_file)
+            save = input("Save model data? [y/n] ")
+            if save == 'y':
+                env.close()
+                model.save(model_file)
+                if epochs_processed >= 5:
+                    plot_reward(rewards, figure_file)
             sys.exit(0)
         except SystemExit:
             os._exit(0)
