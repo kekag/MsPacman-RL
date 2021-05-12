@@ -1,8 +1,15 @@
 __pycache__/
 
-# presentation files
+# VScode garbage
+.vscode/
+
+# Windows virtual environment
+.venv/
+
+# Presentation files
 *.url
 *.pdf
 
-# tf.keras models (.h5)
+# tf.keras models (.h5's)
 models/
+*.h5
