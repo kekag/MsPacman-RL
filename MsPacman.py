@@ -83,11 +83,13 @@ def create_state_model(n_bytes, action_count, channel_count, model_loss, model_o
 # Arg defaults
 state = True        # Use RAM/state (True) or image stack (False) as input
 gamma = 0.995       # Remember past experience 
-epsilon = 0.05      # Random operation percentage
+epsilon = 0.15      # Random operation percentage
 n_episodes = 5      # Number of Training iterations
 one_life = False    # Terminate training after losing first life
 verbose = True      # Print information each tick
 render = True       # Render window
+decay = 0.99        # Epsilon decay rate
+min_epsilon = 0.01  # Floor of decay
 
 # Basic parser
 if len(sys.argv) > 1:
@@ -131,6 +133,26 @@ if len(sys.argv) > 1:
         elif args[i] in ("--background", "-background", "-b"):
             verbose = False
             render = False
+        elif args[i] in ("--decay", "-decay", "-d"):
+            try:
+                decay = float(args[i+1])
+                if decay > 1:
+                    decay = 1
+                if decay < 0.01:
+                    decay = 0.01
+                i += 1
+            except:
+                print(f"Expected float after '{args[i]}' flag, skipping...")
+        elif args[i] in ("--floor", "-floor", "-f"):
+            try:
+                min_epsilon = float(args[i+1])
+                if min_epsilon > epsilon:
+                    min_epsilon = epsilon
+                if min_epsilon < 0:
+                    min_epsilon = 0
+                i += 1
+            except:
+                print(f"Expected float after '{args[i]}' flag, skipping...")
         else:
             print("FLAG USAGE\n")
             print("-image")
@@ -138,13 +160,17 @@ if len(sys.argv) > 1:
             print("-gamma (float)")
             print("\tValue of future reward [default 0.995]")
             print("-epsilon (float)")
-            print("\tChance of random step [default 0.05]")
+            print("\tValue of experimentation [default 0.15]")
             print("-numeps (int)")
-            print("\tNumber of training iterations [default 5]")
+            print("\tNumber of training episodes [default 5]")
             print("-onelife")
             print("\tTerminate each iteration after losing first life")
             print("-background")
             print("\tHide window and display only basic information\n")
+            print("-decay (float)")
+            print("\tEpsilon decay [default 0.99]")
+            print("-floor (float)")
+            print("\tFloor of decay [default 0.01]")
             sys.exit(0)
         i += 1
 
