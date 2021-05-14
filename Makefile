@@ -13,7 +13,6 @@ grpcinstall:
 
 grpcgen:
 	python3 -m grpc_tools.protoc -I protos --python_out=. --grpc_python_out=. protos/mpm/*.proto
-	python3 -m grpc_tools.protoc -I protos --python_out=. --grpc_python_out=. protos/google/protobuf/*.proto
 
 run:
 	sudo ${PYTHON} MsPacman.py

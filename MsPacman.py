@@ -12,6 +12,23 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import keyboard
 
+# class *service*(*gen*):
+#     def *method*(self, request, response):
+#         return something
+
+# Skeleton server
+# def serve():
+#     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+#     *gen*.add_*service*Servicer_to_server(*service*(), server)
+#     server.add_insecure_port('[::]:*portNum*')
+#     server.start()
+#     server.wait_for_termination()
+
+# Skeleton client
+# channel = grpc.insecure_channel('localhost:50051')
+# stub = *gen*.*method*stub(channel)
+# response = stub.*method*(*proto_pb2.HelloRequest(name='you'))
+
 def plot_reward(history, filename):
     fig = plt.figure(figsize=(10, 7))
     plt.plot(history)
@@ -91,6 +108,7 @@ def create_state_model(n_bytes, action_count, channel_count, model_loss, model_o
     return model
 
 # Arg defaults
+server = False      # Server or client
 state = True        # Use RAM/state (True) or image stack (False) as input
 gamma = 0.995       # Remember past experience 
 epsilon = 0.15      # Random operation percentage
@@ -107,7 +125,9 @@ if len(sys.argv) > 1:
     args = sys.argv[1:]
     i = 0
     while i < len(args):
-        if args[i] in ("--image", "-image", "-i"):
+        if args[i] in ("--server", "-server", "-s"):
+            server = True
+        elif args[i] in ("--image", "-image", "-i"):
             state = False
         elif args[i] in ("--gamma", "-gamma", "-g"):
             try:
@@ -172,6 +192,8 @@ if len(sys.argv) > 1:
                 print(f"Expected string after '{args[i]}' flag, skipping...")
         else:
             print("FLAG USAGE")
+            print("-server")
+            print("\tRun as server")
             print("-image")
             print("\tUse image stack environment")
             print("-gamma (float)")
@@ -251,7 +273,7 @@ def main():
 
         state = env.reset()
         state = np.asarray(state)
-        state = state.reshape((1,)+state.shape+(1,))
+        state = state.reshape((1,) + state.shape+(1,))
 
         done = False
         always_noop = False
@@ -308,7 +330,7 @@ def main():
                     action = np.argmax(model.predict(state))
 
             # ↑ ↑ CLIENT INPUT AND RENDERING ↑ ↑
-            #     Handled by gRPC                
+            #     request: model, env, state, action, total_reward, gamma                
             # ↓ ↓ SERVER MODEL PROCESSING  ↓ ↓ ↓ 
 
             next_state, current_reward, done, info = env.step(action)
@@ -319,14 +341,17 @@ def main():
             total_reward += current_reward
             # total_reward += 1 # reward each survived tick
 
+            # Q-value for action
             target = current_reward + gamma * np.max(model.predict(next_state))
+            # Array of Q-values for all actions
             target_vec = model.predict(state)[0]
+            # Change actions value to be target for fitting
             target_vec[action] = target
 
             model.fit(state, target_vec.reshape(-1, action_count), epochs=1, verbose=0)
 
             # ↑ ↑ END SERVER STEP AND FIT ↑ ↑ ↑
-            #     Return relevant variables
+            #     response: model, env, next_state, current reward, done, info
             # ↓ ↓ CLIENT OUTPUT ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓
 
             if verbose:
