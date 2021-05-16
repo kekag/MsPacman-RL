@@ -12,10 +12,6 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import keyboard
 
-# class *service*(*gen*):
-#     def *method*(self, request, response):
-#         return something
-
 # Skeleton server
 # def serve():
 #     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
@@ -273,6 +269,7 @@ def main():
 
         state = env.reset()
         state = np.asarray(state)
+        print(state)
         state = state.reshape((1,) + state.shape+(1,))
 
         done = False
