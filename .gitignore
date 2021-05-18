@@ -1,9 +1,7 @@
 __pycache__/
 
-# VScode garbage
-.vscode/
-
 # Windows virtual environment
+.vscode/
 .venv/
 
 # Presentation files
@@ -13,3 +11,7 @@ __pycache__/
 # tf.keras models (.h5's)
 models/
 *.h5
+
+# Generated files
+*pb2_grpc.py
+*pb2.py

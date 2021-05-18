@@ -5,3 +5,5 @@ tensorflow
 gym
 gym[atari]
 keyboard
+grpcio
+grpcio-tools
