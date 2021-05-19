@@ -12,14 +12,17 @@ from parse import *
 from process import *
 
 server_fits = 0
+prev_action = -1
 
 # gRPC service implementation
 class Processor(mpm_pb2_grpc.ProcessorServicer):
-    def PredictAction(self, request, context):            
+    def PredictAction(self, request, context):
+        global prev_action   
         state = pickle.loads(request.state)
         action = np.argmax(model.predict(state))
-        if verbose:
+        if prev_action != action:
             print(f"Predicting {action_meanings[action]}")
+        prev_action = action
         return mpm_pb2.ActionResponse(action=action)
 
     def ProcessModel(self, request, context):
@@ -41,6 +44,7 @@ class Processor(mpm_pb2_grpc.ProcessorServicer):
 
         if request.done:
             print("Done fitting model for current episode")
+            episodes_processed += 1
         return mpm_pb2.Empty()
 
     def SaveModel(self, request, context):
@@ -53,7 +57,7 @@ class Processor(mpm_pb2_grpc.ProcessorServicer):
         return mpm_pb2.Empty()
 
     def DropClient(self, request, context):
-        print("Client terminated training, waiting for new client")
+        print("Client terminated training")
         return mpm_pb2.Empty()
 
 # Decide only after parsing whether to launch server, should not need to initialize training variables
@@ -199,6 +203,7 @@ def main():
         episodes_processed += 1
         if epsilon > min_epsilon:
             epsilon *= decay
+            print("Decayed epsilon to", epsilon)
 
     env.close()
     if run_as == Run.local:
@@ -207,6 +212,7 @@ def main():
             plot_reward(rewards, figure_file)
     elif run_as == Run.client:
         stub.SaveModel(mpm_pb2.SaveRequest(model_only=False))
+        stub.DropClient(mpm_pb2.Empty())
 
 try:
     main()
