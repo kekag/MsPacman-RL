@@ -1,13 +1,13 @@
 import sys
 from enum import Enum
 
-#/ INITALIZE PARAMETERS AND PARSE FLAGS /#
+#/ INITALIZE LEARNING PARAMETERS AND PARSE ARGS /#
 
 Run = Enum("Run", "local server client")
 
 # Argument defaults
 run_as = Run.local # Local, server, or client (could use enum, not necessary)
-state = True       # Use RAM/gamestate (True) or image stack (False) as input
+RAMstate = True    # Use RAM/gamestate (True) or image stack (False) as input
 gamma = 0.995      # Remember past experience 
 epsilon = 0.15     # Random operation percentage
 n_episodes = 5     # Number of Training iterations
@@ -30,7 +30,7 @@ if len(sys.argv) > 1:
         elif args[i] in ("--client", "-client", "-c"):
             run_as = Run.client
         elif args[i] in ("--image", "-image", "-i"):
-            state = False
+            RAMstate = False
         elif args[i] in ("--gamma", "-gamma", "-g"):
             try:
                 gamma = float(args[i+1])

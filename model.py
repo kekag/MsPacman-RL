@@ -1,6 +1,6 @@
 import os
 
-# Only print tensorflow errors
+# Tensorflow print errors (default is print everything)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
 import tensorflow as tf
@@ -9,10 +9,10 @@ import tensorflow.keras as keras
 #/ CREATE MODELS /#
 
 # 3D CNN model for frame stack as input <4, 84, 84>
-def create_image_processing_model(size, n_stack, n_actions, n_channels, model_loss, model_optimizer, model_metrics):
-    kernel_size = (n_stack, 4, 4)
-    pool_size = (n_stack // 2, 2, 2)
-    input_shape = (n_stack, size, size, n_channels)
+def create_image_processing_model(frame_size, frame_stack, n_actions, n_channels, model_loss, model_optimizer, model_metrics):
+    kernel_size = (frame_stack, 4, 4)
+    pool_size = (frame_stack // 2, 2, 2)
+    input_shape = (frame_stack, frame_size, frame_size, n_channels)
 
     model = keras.models.Sequential()
     model.add(keras.layers.Conv3D(128, kernel_size=kernel_size, activation="relu", padding="same", input_shape=input_shape))

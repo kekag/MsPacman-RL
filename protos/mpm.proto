@@ -3,19 +3,32 @@ syntax = "proto3";
 package mpm;
 
 service Processor {
-    rpc ProcessModel (ModelRequest) returns (ModelResponse) {}
+    rpc PredictAction (StateRequest) returns (ActionResponse) {}
+    rpc ProcessModel (ModelRequest) returns (Empty) {}
+    rpc SaveModel (SaveRequest) returns (Empty) {}
+    rpc DropClient (Empty) returns (Empty) {}
+}
+
+message StateRequest {
+    bytes state = 1; // pickled state
+}
+
+message ActionResponse {
+    int32 action = 1; // chosen action
 }
 
 message ModelRequest {
-    bytes env = 1;     // pickled env
-    bytes state = 2;   // initial state
-    uint32 action = 3; // env chosen action
+    bytes state = 1;      // initial state
+    bytes next_state = 2; // state after step
+    float reward = 3;     // current reward
+    bool done = 4;        // game terminated
+    int32 action = 5;     // target action
 }
 
-message ModelResponse {
-    bytes env = 1;     // pickled env
-    bytes array = 2;   // np array data (next_state)
-    string info = 3;   // env.step ALE info
-    double reward = 4; // current reward
-    bool done = 5;     // done
+message SaveRequest {
+    bool model_only = 1; // don't save plot
+}
+
+message Empty {
+    // Nothing needed at this point
 }
