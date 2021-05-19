@@ -13,5 +13,11 @@ gen:
 run:
 	sudo ${PYTHON} MsPacman.py
 
+server:
+	sudo ${PYTHON} MsPacman.py -server
+
+client:
+	sudo ${PYTHON} MsPacman.py -client
+
 clean:
 	rm -rf ./__pycache__

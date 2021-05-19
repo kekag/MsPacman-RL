@@ -7,21 +7,15 @@ service Processor {
 }
 
 message ModelRequest {
-    string seed = 1;     // env seed
-    bytes model = 2;     // pickled model
-    string b64array = 3; // np array data (state)
-    uint32 size = 4;     // array size 
-    uint32 action = 5;   // env chosen action
-    int32 reward = 6;    // total reward
-    double gamma = 7;    // gamma
+    bytes env = 1;     // pickled env
+    bytes state = 2;   // initial state
+    uint32 action = 3; // env chosen action
 }
 
 message ModelResponse {
-    string seed = 1;     // env seed
-    bytes model = 2;     // pickled model
-    string b64array = 3; // np array data (next_state)
-    uint32 size = 4;     // array size
-    string info = 5;     // env.step ALE info
-    int32 reward = 6;    // current reward
-    bool done = 7;       // done
+    bytes env = 1;     // pickled env
+    bytes array = 2;   // np array data (next_state)
+    string info = 3;   // env.step ALE info
+    double reward = 4; // current reward
+    bool done = 5;     // done
 }
