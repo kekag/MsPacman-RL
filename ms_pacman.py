@@ -27,6 +27,7 @@ class Processor(mpm_pb2_grpc.ProcessorServicer):
 
     def ProcessModel(self, request, context):
         global server_fits
+        global episodes_processed
         if server_fits == 0:
             print("Client found, fitting model")
         elif server_fits % 100 == 0 and not verbose: # sanity check every 100 fits
